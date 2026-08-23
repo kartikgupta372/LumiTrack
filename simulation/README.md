@@ -1,6 +1,6 @@
 # FSOC PAT Testbed — Group 1 Clean Simulation MVP
 
-This repository currently implements only **Group 1: Simulation and Virtual Camera** for SIH'26 problem statement 169 / PSC26169.
+This folder contains **Group 1: Simulation and Virtual Camera** for SIH'26 problem statement 169 / PSC26169.
 
 The code generates a deterministic angular world, moves a simulated optical beacon, applies scripted pan/tilt rate commands to a virtual camera, projects the beacon into image coordinates, checks the camera field of view, and renders a clean OpenCV camera frame.
 
@@ -23,17 +23,20 @@ ControlCommand ─> Camera ───┘                         └────�
 ## Project layout
 
 ```text
-src/fsoc_sim/
-  camera.py         Pan/tilt dynamics, rate limits and angle limits
-  clock.py          Deterministic fixed-timestep clock
-  config.py         Validated immutable configuration
-  demo.py           Scripted open-loop demonstration
-  models.py         Boundary data contracts
-  projection.py     Angular direction to image-coordinate projection
-  renderer.py       Clean OpenCV frame generation
-  simulation.py     Group 1 orchestration
-  trajectories.py   Stationary, linear, circular and sinusoidal motion
-tests/              Unit and integration tests for the clean MVP
+simulation/
+  pyproject.toml    Python package and pytest configuration
+  requirements.txt Direct Group 1 dependencies
+  fsoc_sim/
+    camera.py       Pan/tilt dynamics, rate limits and angle limits
+    clock.py        Deterministic fixed-timestep clock
+    config.py       Validated immutable configuration
+    demo.py         Scripted open-loop demonstration
+    models.py       Boundary data contracts
+    projection.py   Angular direction to image-coordinate projection
+    renderer.py     Clean OpenCV frame generation
+    simulation.py   Group 1 orchestration
+    trajectories.py Stationary, linear, circular and sinusoidal motion
+  tests/            Unit and integration tests for the clean MVP
 ```
 
 ## Conventions
@@ -52,23 +55,25 @@ tests/              Unit and integration tests for the clean MVP
 
 ## Windows setup
 
-Python 3.12.10 is installed for the current Windows user. From PowerShell in this directory:
+Python 3.12.10 is installed for the current Windows user. From PowerShell at the repository root:
+
+```powershell
+cd simulation
+..\.venv\Scripts\python.exe -m pip install -e ".[test]"
+```
+
+Alternatively, activate the environment before entering the folder:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
+cd simulation
 python -m pip install -e ".[test]"
-```
-
-If PowerShell execution policy prevents activation, use the environment's interpreter directly:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -e ".[test]"
 ```
 
 ## Run the tests
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest
+..\.venv\Scripts\python.exe -m pytest
 ```
 
 ## Run the demo
@@ -76,19 +81,19 @@ If PowerShell execution policy prevents activation, use the environment's interp
 The default run generates 180 deterministic frames, an MJPG video, first/last PNGs and a JSON summary in `demo-output/`:
 
 ```powershell
-.\.venv\Scripts\python.exe -m fsoc_sim.demo
+..\.venv\Scripts\python.exe -m fsoc_sim.demo
 ```
 
 Choose a trajectory or frame count:
 
 ```powershell
-.\.venv\Scripts\python.exe -m fsoc_sim.demo --trajectory circular --frames 240
+..\.venv\Scripts\python.exe -m fsoc_sim.demo --trajectory circular --frames 240
 ```
 
 To display the OpenCV window while also writing the artifacts:
 
 ```powershell
-.\.venv\Scripts\python.exe -m fsoc_sim.demo --display
+..\.venv\Scripts\python.exe -m fsoc_sim.demo --display
 ```
 
 Press Escape to stop the displayed demo. The normal headless form is preferred for CI and repeatable testing.
