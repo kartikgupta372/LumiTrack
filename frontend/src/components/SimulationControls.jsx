@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Pause, Play, RotateCcw, Square, Zap } from "lucide-react";
 
 export default function SimulationControls({
@@ -61,3 +62,10 @@ export default function SimulationControls({
     </section>
   );
 }
+=======
+/**
+ * SimulationControls — alias for ControlPanel.
+ * Kept for backward compatibility with App.jsx imports.
+ */
+export { default } from './ControlPanel';
+>>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f

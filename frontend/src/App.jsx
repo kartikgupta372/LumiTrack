@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, Download, Radio, Wifi, WifiOff } from "lucide-react";
 import { api, createSimulationSocket } from "./services/websocket";
@@ -353,3 +354,56 @@ export default function App() {
     </div>
   );
 }
+=======
+/**
+ * App.jsx — LumiTrack Root Component
+ *
+ * Architecture:
+ *   useSimulation() hook  — all state, WS, and API logic
+ *   <Navbar />            — header with view toggle + connection badge
+ *   <SimulationView />    — full dashboard layout
+ */
+
+import React, { useState } from 'react';
+import Navbar from './components/Navbar';
+import SimulationView from './components/SimulationView';
+import { useSimulation } from './hooks/useSimulation';
+
+export default function App() {
+  const [viewMode, setViewMode] = useState('camera'); // 'camera' | '3d'
+
+  const {
+    telemetry,
+    metrics,
+    history,
+    scenarios,
+    selectedScenarioId,
+    isRunning,
+    isPaused,
+    isConnected,
+    actions,
+  } = useSimulation();
+
+  return (
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col">
+      <Navbar
+        isConnected={isConnected}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
+
+      <SimulationView
+        telemetry={telemetry}
+        metrics={metrics}
+        history={history}
+        scenarios={scenarios}
+        selectedScenarioId={selectedScenarioId}
+        isRunning={isRunning}
+        isPaused={isPaused}
+        viewMode={viewMode}
+        actions={actions}
+      />
+    </div>
+  );
+}
+>>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f

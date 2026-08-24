@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .venv/
 __pycache__/
 *.py[cod]
@@ -7,3 +8,133 @@ build/
 dist/
 demo-output/
 frontend/node_modules/
+=======
+# ─── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Egg / distribution
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+
+# ─── Jupyter ────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_meta
+
+# ─── Testing & Coverage ─────────────────────────────────────────────────────
+.pytest_cache/
+.tox/
+.nox/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ─── AI / ML Models ─────────────────────────────────────────────────────────
+models/*.onnx
+models/*.pt
+models/*.pth
+models/*.h5
+models/*.pkl
+models/*.bin
+!models/.gitkeep
+
+# ─── Generated Reports & Logs ───────────────────────────────────────────────
+reports/*.pdf
+reports/*.csv
+reports/*.json
+!reports/.gitkeep
+logs/
+*.log
+
+# ─── Environment Variables ──────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ─── OS / System Files ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── IDE / Editor ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*.orig
+
+# ─── Node.js / Frontend ─────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Vite & build output
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+dist/
+
+# ─── Docker ─────────────────────────────────────────────────────────────────
+.docker/
+
+# ─── Temporary / Scratch Files ──────────────────────────────────────────────
+tmp/
+temp/
+scratch/
+*.tmp
+*.bak
+*.swp
+~$*
+
+# ─── Data & Experiments ─────────────────────────────────────────────────────
+experiments/outputs/
+experiments/*.pkl
+data/raw/
+data/processed/
+
+# ─── Simulation Artifacts ───────────────────────────────────────────────────
+simulation/output/
+simulation/*.mp4
+simulation/*.avi
+simulation/*.png
+simulation/*.jpg
+>>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f
