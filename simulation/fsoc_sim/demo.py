@@ -9,38 +9,11 @@ from pathlib import Path
 
 import cv2
 
-from fsoc_sim.config import AppConfig, CameraConfig, SimulationConfig
+from fsoc_sim.adapters import frontend_camera_payload
+from fsoc_sim.config import AppConfig, CameraConfig, DisturbanceConfig, SimulationConfig
 from fsoc_sim.models import ControlCommand
 from fsoc_sim.simulation import Simulation
-from fsoc_sim.trajectories import CircularTrajectory, LinearTrajectory, SinusoidalTrajectory, StationaryTrajectory
-
-
-def _trajectory(name: str):
-    if name == "stationary":
-        return StationaryTrajectory(azimuth_rad=0.16, elevation_rad=0.08)
-    if name == "linear":
-        return LinearTrajectory(
-            initial_azimuth_rad=-0.18,
-            initial_elevation_rad=0.08,
-            azimuth_rate_rad_s=0.035,
-            elevation_rate_rad_s=-0.008,
-        )
-    if name == "circular":
-        return CircularTrajectory(
-            centre_azimuth_rad=0.05,
-            centre_elevation_rad=0.02,
-            azimuth_radius_rad=0.16,
-            elevation_radius_rad=0.10,
-            frequency_hz=0.08,
-        )
-    return SinusoidalTrajectory(
-        centre_azimuth_rad=0.04,
-        centre_elevation_rad=0.01,
-        azimuth_amplitude_rad=0.20,
-        elevation_amplitude_rad=0.10,
-        azimuth_frequency_hz=0.08,
-        elevation_frequency_hz=0.12,
-    )
+from fsoc_sim.trajectories import TrajectoryType, create_trajectory
 
 
 def _scripted_command(frame_id: int, fps: float) -> ControlCommand:
@@ -58,6 +31,7 @@ def run_demo(
     frames: int,
     trajectory_name: str,
     display: bool,
+    disturbances: DisturbanceConfig | None = None,
 ) -> dict[str, object]:
     config = AppConfig(
         simulation=SimulationConfig(fps=30.0, seed=169),
@@ -67,8 +41,12 @@ def run_demo(
             initial_pan_rad=-0.08,
             initial_tilt_rad=-0.04,
         ),
+        disturbances=disturbances or DisturbanceConfig(),
     )
-    simulation = Simulation(config, _trajectory(trajectory_name))
+    simulation = Simulation(
+        config,
+        create_trajectory(trajectory_name, seed=config.simulation.seed),
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     video_path = output_dir / "fsoc_group1_demo.avi"
     writer = cv2.VideoWriter(
@@ -83,12 +61,29 @@ def run_demo(
     first_step = None
     last_step = None
     visible_frames = 0
+    truth_records: list[dict[str, object]] = []
     try:
         for frame_id in range(frames):
             step = simulation.step(_scripted_command(frame_id, config.simulation.fps))
             first_step = first_step or step
             last_step = step
             visible_frames += int(step.truth.visible)
+            truth_records.append(
+                {
+                    "frame_id": step.truth.frame_id,
+                    "timestamp_seconds": step.truth.timestamp_seconds,
+                    "world_x_m": step.truth.world_x_m,
+                    "world_y_m": step.truth.world_y_m,
+                    "world_z_m": step.truth.world_z_m,
+                    "velocity_x_m_s": step.truth.velocity_x_m_s,
+                    "velocity_y_m_s": step.truth.velocity_y_m_s,
+                    "in_fov": step.truth.in_fov,
+                    "occluded": step.truth.occluded,
+                    "visible": step.truth.visible,
+                    "projected_x_px": step.truth.projected_x_px,
+                    "projected_y_px": step.truth.projected_y_px,
+                }
+            )
             writer.write(step.frame.image_bgr)
             if display:
                 cv2.imshow("FSOC Group 1 - clean deterministic simulation", step.frame.image_bgr)
@@ -104,6 +99,16 @@ def run_demo(
     last_path = output_dir / "last_frame.png"
     cv2.imwrite(str(first_path), first_step.frame.image_bgr)
     cv2.imwrite(str(last_path), last_step.frame.image_bgr)
+    frontend_payload_path = output_dir / "frontend_camera_payload.json"
+    frontend_payload_path.write_text(
+        json.dumps(frontend_camera_payload(last_step.frame, fps=config.simulation.fps), indent=2),
+        encoding="utf-8",
+    )
+    truth_path = output_dir / "ground_truth.jsonl"
+    truth_path.write_text(
+        "".join(json.dumps(record, separators=(",", ":")) + "\n" for record in truth_records),
+        encoding="utf-8",
+    )
 
     summary = {
         "trajectory": trajectory_name,
@@ -117,6 +122,15 @@ def run_demo(
         "video": str(video_path),
         "first_frame": str(first_path),
         "last_frame": str(last_path),
+        "frontend_camera_payload": str(frontend_payload_path),
+        "ground_truth": str(truth_path),
+        "disturbances": {
+            "noise": config.disturbances.noise,
+            "vibration": config.disturbances.vibration,
+            "turbulence": config.disturbances.turbulence,
+            "blur": config.disturbances.blur,
+            "occlusion": config.disturbances.occlusion,
+        },
     }
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
@@ -127,15 +141,54 @@ def main() -> None:
     parser.add_argument("--frames", type=int, default=180)
     parser.add_argument(
         "--trajectory",
-        choices=("stationary", "linear", "circular", "sinusoidal"),
+        choices=tuple(item.value for item in TrajectoryType) + ("all",),
         default="sinusoidal",
     )
-    parser.add_argument("--output", type=Path, default=Path("demo-output"))
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(__file__).resolve().parents[1] / "demo-output",
+    )
+    parser.add_argument("--noise", type=float, default=0.0)
+    parser.add_argument("--vibration", type=float, default=0.0)
+    parser.add_argument("--turbulence", type=float, default=0.0)
+    parser.add_argument("--blur", type=float, default=0.0)
+    parser.add_argument("--occlusion", action="store_true")
     parser.add_argument("--display", action="store_true", help="Show an OpenCV window; Escape stops it")
     args = parser.parse_args()
     if args.frames <= 0:
         parser.error("--frames must be greater than zero")
-    summary = run_demo(args.output, args.frames, args.trajectory, args.display)
+    try:
+        disturbances = DisturbanceConfig(
+            noise=args.noise,
+            vibration=args.vibration,
+            turbulence=args.turbulence,
+            blur=args.blur,
+            occlusion=args.occlusion,
+            occlusion_start_s=2.0,
+            occlusion_duration_s=2.0,
+        )
+    except ValueError as error:
+        parser.error(str(error))
+    if args.trajectory == "all":
+        summary = {
+            item.value: run_demo(
+                args.output / item.value,
+                args.frames,
+                item.value,
+                args.display,
+                disturbances,
+            )
+            for item in TrajectoryType
+        }
+    else:
+        summary = run_demo(
+            args.output,
+            args.frames,
+            args.trajectory,
+            args.display,
+            disturbances,
+        )
     print(json.dumps(summary, indent=2))
 
 
