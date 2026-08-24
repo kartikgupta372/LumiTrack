@@ -1,0 +1,12 @@
+{
+  "name": "lumitrack",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend3": "npm --prefix frontend3 run dev",
+    "build:frontend3": "npm --prefix frontend3 run build",
+    "dev:frontend2": "npm --prefix frontend2 run dev",
+    "build:frontend2": "npm --prefix frontend2 run build",
+    "dev:frontend": "npm --prefix frontend run dev"
+  }
+}
