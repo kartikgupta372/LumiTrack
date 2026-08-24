@@ -3,7 +3,7 @@ from math import pi
 import pytest
 
 from fsoc_sim.clock import FixedStepClock
-from fsoc_sim.config import BeaconRenderConfig, CameraConfig, SimulationConfig
+from fsoc_sim.config import BeaconRenderConfig, CameraConfig, DisturbanceConfig, SimulationConfig
 
 
 def test_config_rejects_invalid_values() -> None:
@@ -19,6 +19,10 @@ def test_config_rejects_invalid_values() -> None:
         CameraConfig(initial_pan_rad=2.0, min_pan_rad=-1.0, max_pan_rad=1.0)
     with pytest.raises(ValueError):
         BeaconRenderConfig(intensity=256)
+    with pytest.raises(ValueError):
+        DisturbanceConfig(noise=101.0)
+    with pytest.raises(ValueError):
+        DisturbanceConfig(occlusion_duration_s=3.0, occlusion_period_s=2.0)
 
 
 def test_fixed_step_clock_has_exact_frame_based_time() -> None:

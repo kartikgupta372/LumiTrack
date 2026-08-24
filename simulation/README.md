@@ -1,127 +1,135 @@
-# FSOC PAT Testbed — Group 1 Clean Simulation MVP
+# FSOC PAT Virtual Camera Simulation
 
-This folder contains **Group 1: Simulation and Virtual Camera** for SIH'26 problem statement 169 / PSC26169.
+This folder is the self-contained software-in-the-loop simulation and virtual
+camera source for the FSOC coarse Pointing, Acquisition, and Tracking system.
+It produces deterministic target motion, a steerable pan/tilt optical view,
+realistic seeded disturbances, detector-ready OpenCV frames, browser-ready JPEG
+payloads, and separate ground truth for evaluation.
 
-The code generates a deterministic angular world, moves a simulated optical beacon, applies scripted pan/tilt rate commands to a virtual camera, projects the beacon into image coordinates, checks the camera field of view, and renders a clean OpenCV camera frame.
+All implementation and tests for this subsystem live under `simulation/`.
 
-It intentionally does **not** implement detection, tracking, autonomous control, backend/frontend, disturbances, YOLO, or 3D visualization.
-
-## Architecture
-
-```text
-Trajectory ──> BeaconState ─┐
-                            ├─> Angular projection ─> Clean OpenCV frame ─> FramePacket
-ControlCommand ─> Camera ───┘                         └───────────────> GroundTruth (separate)
-                  ↑
-           FixedStepClock
-```
-
-- `FramePacket` is the future Group 2 input. It contains the image and legitimate camera metadata only.
-- `GroundTruth` is a separate evaluation/debug record and must never be passed to a future detector.
-- `ControlCommand` is the future Group 3 input. The demo supplies scripted commands only; it is not an autonomous controller.
-
-## Project layout
+## Pipeline
 
 ```text
-simulation/
-  pyproject.toml    Python package and pytest configuration
-  requirements.txt Direct Group 1 dependencies
-  fsoc_sim/
-    camera.py       Pan/tilt dynamics, rate limits and angle limits
-    clock.py        Deterministic fixed-timestep clock
-    config.py       Validated immutable configuration
-    demo.py         Scripted open-loop demonstration
-    models.py       Boundary data contracts
-    projection.py   Angular direction to image-coordinate projection
-    renderer.py     Clean OpenCV frame generation
-    simulation.py   Group 1 orchestration
-    trajectories.py Stationary, linear, circular and sinusoidal motion
-  tests/            Unit and integration tests for the clean MVP
+movement profile -> beacon direction/world state -> jittered camera projection
+                 -> optical frame renderer -> turbulence/blur/noise
+                 -> FramePacket.image_bgr  (detection and tracking)
+                 -> JPEG/base64 adapter     (backend/WebSocket/frontend)
+
+separate output  -> GroundTruth             (evaluation only)
+control input    -> ControlCommand           (pan/tilt rates from controller)
 ```
 
-## Conventions
+Ground truth is never placed in `FramePacket` or the frontend camera payload, so
+a detector/tracker cannot accidentally use privileged simulated coordinates.
 
-- Python 3.12 or newer.
-- Radians internally; convert to degrees only in future presentation layers.
-- Beacon direction is `(azimuth, elevation)`.
-- Positive azimuth and positive camera pan point right.
-- Positive elevation and positive camera tilt point upward.
-- Image origin is top-left; image `x` increases right and image `y` increases down.
-- The geometric centre is `((width - 1) / 2, (height - 1) / 2)`.
-- A beacon exactly on a FOV boundary is visible and maps to the corresponding edge pixel.
-- Simulation time is `frame_id * dt`; it never depends on rendering speed or wall-clock timing.
-- A command is rate-limited and integrated for one fixed timestep before that step's frame is generated.
-- A run seed is owned by `Simulation`. It is reset deterministically and is reserved for later seeded scenarios/disturbances.
+## Supported movement
 
-## Windows setup
+- `stationary`
+- `linear`
+- `circular`
+- `sinusoidal`
+- `erratic` (seeded, continuous piecewise-random velocity)
+- `figure_eight` (Lissajous movement)
 
-Python 3.12.10 is installed for the current Windows user. From PowerShell at the repository root:
+Every trajectory exposes angular position and rate. Ground truth also includes
+Cartesian position/velocity at the configured beacon range for 3D visualization
+and quantitative evaluation.
+
+## Camera and environment
+
+- 640 x 480 BGR frames at 30 FPS by default
+- Configurable horizontal/vertical FOV, pan/tilt limits, and slew limits
+- Seeded star background and optical spot/glow
+- Gaussian sensor noise (`noise`, 0-100)
+- Platform orientation jitter (`vibration`, 0-100)
+- Brightness scintillation and smooth spatial warp (`turbulence`, 0-100)
+- Rate-aware horizontal/vertical motion blur (`blur`, 0-100)
+- One-shot or periodic scheduled occlusion
+- Runtime disturbance updates without resetting the simulation clock
+
+## Integration contracts
+
+Detection and tracking consume the frame without a codec round trip:
+
+```python
+step = simulation.step(control_command)
+detection = detector.detect(step.frame.image_bgr)
+```
+
+`image_bgr` is a contiguous `numpy.uint8` array shaped `(height, width, 3)`.
+`FramePacket` also contains timestamp, frame number, optical FOV, gimbal angles,
+and the applied gimbal rates.
+
+The current React frontend expects a bare base64 JPEG in `image_base64`:
+
+```python
+from fsoc_sim import frontend_camera_payload
+
+camera_fields = frontend_camera_payload(step.frame, fps=30.0)
+telemetry = {**camera_fields, **detection_tracking_fields}
+await websocket.send_json(telemetry)
+```
+
+The adapter returns the camera-owned subset of the existing dashboard schema:
+`timestamp`, `frame_index`, `fps`, `camera`, `frame`, and `image_base64`.
+Detection, tracking, lock state, and errors must be merged by downstream code.
+
+Slider-compatible runtime updates use the same names as the dashboard/backend:
+
+```python
+simulation.update_disturbances(
+    noise=35,
+    vibration=20,
+    turbulence=45,
+    blur=10,
+    occlusion=False,
+)
+```
+
+## Install and test
+
+From the repository root:
 
 ```powershell
-cd simulation
-..\.venv\Scripts\python.exe -m pip install -e ".[test]"
+.\.venv\Scripts\python.exe -m pip install -r simulation\requirements.txt
+.\.venv\Scripts\python.exe -m pytest simulation\tests
 ```
 
-Alternatively, activate the environment before entering the folder:
+## Generate camera-feed artifacts
+
+One movement:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-cd simulation
-python -m pip install -e ".[test]"
+.\.venv\Scripts\python.exe -m fsoc_sim.demo --trajectory circular --frames 240
 ```
 
-## Run the tests
+All movement types with representative disturbances:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m fsoc_sim.demo --trajectory all --frames 180 `
+  --noise 25 --vibration 20 --turbulence 35 --blur 15 --occlusion
 ```
 
-## Run the demo
+Each output directory contains:
 
-The default run generates 180 deterministic frames, an MJPG video, first/last PNGs and a JSON summary in `demo-output/`:
+- `fsoc_group1_demo.avi`: MJPG camera feed
+- `first_frame.png` and `last_frame.png`: visual inspection frames
+- `frontend_camera_payload.json`: directly consumable base64 camera payload
+- `ground_truth.jsonl`: evaluation-only world and projection truth
+- `summary.json`: run configuration and artifact paths
 
-```powershell
-..\.venv\Scripts\python.exe -m fsoc_sim.demo
-```
+The default output path is `simulation/demo-output/`. Add `--display` for an
+interactive OpenCV window; headless output is preferable for repeatable tests.
 
-Choose a trajectory or frame count:
+## Coordinate and timing conventions
 
-```powershell
-..\.venv\Scripts\python.exe -m fsoc_sim.demo --trajectory circular --frames 240
-```
-
-To display the OpenCV window while also writing the artifacts:
-
-```powershell
-..\.venv\Scripts\python.exe -m fsoc_sim.demo --display
-```
-
-Press Escape to stop the displayed demo. The normal headless form is preferred for CI and repeatable testing.
-
-## Future integration contracts
-
-### Group 1 → Group 2: `FramePacket`
-
-- Frame ID and simulation timestamp
-- BGR image
-- Camera pan/tilt
-- Horizontal/vertical FOV
-
-It deliberately excludes beacon truth, projected target pixels and visibility truth.
-
-### Group 3 → Group 1: `ControlCommand`
-
-- Requested pan rate in rad/s
-- Requested tilt rate in rad/s
-
-Group 1 clips these rates and camera angles using `CameraConfig`. It does not calculate tracking error or decide the command.
-
-## Clean MVP acceptance criteria
-
-- All four trajectories produce mathematically predictable positions.
-- Same configuration, command sequence and seed reproduce identical frames and ground truth.
-- Camera commands obey rate and angle limits.
-- Positive azimuth maps right; positive elevation maps upward in the image.
-- Exact FOV boundaries map to edge pixels; targets outside the FOV are not rendered.
-- Camera motion changes subsequent generated frames.
-- Ground truth remains separate from the future detector input.
+- Radians internally; frontend adapter converts camera values to degrees.
+- Positive azimuth/pan points right; positive elevation/tilt points upward.
+- Image origin is top-left; `x` grows right and `y` grows down.
+- Geometric center is `((width - 1) / 2, (height - 1) / 2)`.
+- An exact FOV boundary is visible and maps to the corresponding edge pixel.
+- Simulation time is `frame_id / fps`, independent of rendering/wall-clock time.
+- Commands are rate-limited and integrated before the current frame is rendered.
+- Resetting replays target, camera, star field, and disturbances exactly for the
+  same configuration, seed, and command sequence.
