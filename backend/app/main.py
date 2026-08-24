@@ -66,3 +66,4 @@ async def websocket_simulation(websocket: WebSocket):
         print("Client disconnected from /ws/simulation WebSocket")
     except Exception as e:
         print(f"WebSocket error: {e}")
+>>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f

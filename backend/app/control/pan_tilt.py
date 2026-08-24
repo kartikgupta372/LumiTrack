@@ -1,3 +1,19 @@
+<<<<<<< HEAD
+class PanTiltController:
+    def __init__(self):
+        self.pan = 0.0
+        self.tilt = 0.0
+
+    def update(self, pan_velocity: float, tilt_velocity: float):
+        self.pan += pan_velocity
+        self.tilt += tilt_velocity
+
+        return self.pan, self.tilt
+
+    def reset(self):
+        self.pan = 0.0
+        self.tilt = 0.0
+=======
 """
 Pan-Tilt Gimbal Model
 Simulates the virtual 2-axis pan-tilt camera gimbal platform.
@@ -130,3 +146,4 @@ class PanTiltGimbal:
             cv2.circle(frame, ci, r, (255, 255, 255), -1, cv2.LINE_AA)
 
         return frame
+>>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f
