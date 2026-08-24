@@ -10,6 +10,7 @@ __pycache__/
 # Virtual environments
 venv/
 .venv/
+.python-tools/
 env/
 ENV/
 
@@ -121,6 +122,8 @@ data/raw/
 data/processed/
 
 # ─── Simulation Artifacts ───────────────────────────────────────────────────
+demo-output/
+simulation/demo-output/
 simulation/output/
 simulation/*.mp4
 simulation/*.avi

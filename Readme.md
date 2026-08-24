@@ -9,6 +9,14 @@
 
 ---
 
+## Canonical 2D Simulation Core
+
+The deterministic Group 1 package in [`simulation/fsoc_sim`](simulation/fsoc_sim) is the source of truth for 2D simulation timing, trajectories, pan/tilt motion, angular projection, field-of-view behavior, and clean OpenCV frame rendering. Backend and frontend layers must consume its `FramePacket`, `GroundTruth`, and `ControlCommand` contracts instead of reimplementing simulation mathematics.
+
+Internal angles and angular rates use radians. Degree conversion belongs only at API and presentation boundaries. See [`simulation/README.md`](simulation/README.md) for the full conventions and acceptance criteria.
+
+---
+
 ## 🌟 Key Features
 
 1. **Closed-Loop Software Simulation**: Real-time 2D world simulation modeling moving optical beacons (Stationary, Linear, Circular, Sinusoidal, Erratic trajectories) and steerable virtual Pan-Tilt camera platforms.
@@ -78,11 +86,14 @@
 ## 🛠 Quick Start Guide
 
 ### 1. Prerequisites
-- Python 3.9+
+- Python 3.12+
 - Node.js 18+ & npm
 
 ### 2. Backend Setup
 ```bash
+# From the repository root, install the canonical simulation package
+python -m pip install -e "./simulation[test]"
+
 # Navigate to backend directory
 cd backend
 
