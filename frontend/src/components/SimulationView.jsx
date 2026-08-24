@@ -25,6 +25,7 @@ export default function SimulationView({
   isRunning,
   isPaused,
   viewMode,
+  isConnected,
   actions,
 }) {
   const [disturbances, setDisturbances] = useState({
@@ -34,6 +35,8 @@ export default function SimulationView({
     occlusion: false,
     occlusion_duration_s: 2.0,
   });
+
+  const connectionStatus = isConnected ? 'CONNECTED' : 'DISCONNECTED';
 
   return (
     <main className="flex-1 p-5 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -54,8 +57,9 @@ export default function SimulationView({
           </Suspense>
         )}
 
-        {/* Lock State & Telemetry Badge */}
-        <TrackingStatus telemetry={telemetry} />
+        {/* Lock State & Telemetry Badge with Pipeline Connection Status */}
+        <TrackingStatus telemetry={telemetry} connectionStatus={connectionStatus} />
+
 
         {/* Quick 4-tile Metric Bar */}
         <StatusCard metrics={metrics} telemetry={telemetry} />
