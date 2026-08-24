@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+class PController:
+    def __init__(self, kp: float = 0.1):
+        self.kp = kp
+
+    def calculate(self, error_x: float, error_y: float):
+        pan_velocity = self.kp * error_x
+        tilt_velocity = self.kp * error_y
+
+        return pan_velocity, tilt_velocity
+=======
 """
 Gimbal Controller
 Computes per-axis PID velocity commands from pixel error (detection → frame center).
@@ -80,3 +91,4 @@ class GimbalController:
             tilt_vel = self._pid_tilt.compute(err_tilt_deg)
 
         return pan_vel, tilt_vel
+>>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f

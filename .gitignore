@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+demo-output/
+frontend/node_modules/
+=======
 # ─── Python ────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
@@ -126,3 +137,4 @@ simulation/*.mp4
 simulation/*.avi
 simulation/*.png
 simulation/*.jpg
+>>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f
