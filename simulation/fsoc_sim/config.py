@@ -29,6 +29,40 @@ class SimulationConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class DisturbanceConfig:
+    """Seeded camera and propagation disturbances on a 0--100 scale.
+
+    The field names intentionally match the dashboard/backend configuration so
+    a websocket or REST layer can pass slider values through without adapting
+    them.  Occlusion starts at ``occlusion_start_s`` and repeats only when
+    ``occlusion_period_s`` is greater than zero.
+    """
+
+    noise: float = 0.0
+    vibration: float = 0.0
+    turbulence: float = 0.0
+    blur: float = 0.0
+    occlusion: bool = False
+    occlusion_start_s: float = 0.0
+    occlusion_duration_s: float = 2.0
+    occlusion_period_s: float = 0.0
+
+    def __post_init__(self) -> None:
+        for name in ("noise", "vibration", "turbulence", "blur"):
+            value = getattr(self, name)
+            if not 0.0 <= value <= 100.0:
+                raise ValueError(f"{name} must be between 0 and 100")
+        if self.occlusion_start_s < 0.0:
+            raise ValueError("occlusion_start_s must be non-negative")
+        if self.occlusion_duration_s < 0.0:
+            raise ValueError("occlusion_duration_s must be non-negative")
+        if self.occlusion_period_s < 0.0:
+            raise ValueError("occlusion_period_s must be non-negative")
+        if 0.0 < self.occlusion_period_s < self.occlusion_duration_s:
+            raise ValueError("occlusion_period_s must not be shorter than the duration")
+
+
+@dataclass(frozen=True, slots=True)
 class CameraConfig:
     """Virtual pan-tilt camera geometry and motion limits.
 
@@ -70,20 +104,32 @@ class CameraConfig:
 
 @dataclass(frozen=True, slots=True)
 class BeaconRenderConfig:
-    """Clean beacon and diagnostic overlay appearance."""
+    """Synthetic optical beacon and camera background appearance."""
 
     radius_px: int = 5
     intensity: int = 255
     background_intensity: int = 8
     crosshair_half_length_px: int = 10
     crosshair_intensity: int = 110
+    star_count: int = 70
+    star_max_intensity: int = 72
+    glow_radius_multiplier: float = 2.4
 
     def __post_init__(self) -> None:
         if self.radius_px < 1:
             raise ValueError("radius_px must be at least 1")
         if self.crosshair_half_length_px < 1:
             raise ValueError("crosshair_half_length_px must be at least 1")
-        for name in ("intensity", "background_intensity", "crosshair_intensity"):
+        if self.star_count < 0:
+            raise ValueError("star_count must be non-negative")
+        if self.glow_radius_multiplier < 1.0:
+            raise ValueError("glow_radius_multiplier must be at least 1")
+        for name in (
+            "intensity",
+            "background_intensity",
+            "crosshair_intensity",
+            "star_max_intensity",
+        ):
             value = getattr(self, name)
             if not 0 <= value <= 255:
                 raise ValueError(f"{name} must be between 0 and 255")
@@ -91,8 +137,9 @@ class BeaconRenderConfig:
 
 @dataclass(frozen=True, slots=True)
 class AppConfig:
-    """Top-level Group 1 configuration."""
+    """Top-level simulation configuration."""
 
     simulation: SimulationConfig = field(default_factory=SimulationConfig)
     camera: CameraConfig = field(default_factory=CameraConfig)
     render: BeaconRenderConfig = field(default_factory=BeaconRenderConfig)
+    disturbances: DisturbanceConfig = field(default_factory=DisturbanceConfig)

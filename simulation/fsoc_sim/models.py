@@ -13,6 +13,9 @@ class BeaconState:
     azimuth_rad: float
     elevation_rad: float
     intensity: int = 255
+    range_m: float = 100.0
+    azimuth_rate_rad_s: float = 0.0
+    elevation_rate_rad_s: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,10 +43,11 @@ class Projection:
 
 @dataclass(frozen=True, slots=True)
 class FramePacket:
-    """Future Group 2 input.
+    """Detection/tracking input.
 
-    Deliberately contains the rendered image and camera metadata, but no beacon
-    ground truth or projected target coordinate.
+    It deliberately contains the rendered image and legitimate camera metadata,
+    but no beacon ground truth or projected target coordinate.  A perception
+    system can consume ``image_bgr`` directly without decoding JPEG.
     """
 
     frame_id: int
@@ -53,6 +57,8 @@ class FramePacket:
     camera_tilt_rad: float
     horizontal_fov_rad: float
     vertical_fov_rad: float
+    camera_pan_rate_rad_s: float = 0.0
+    camera_tilt_rate_rad_s: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +74,13 @@ class GroundTruth:
     visible: bool
     projected_x_px: float | None
     projected_y_px: float | None
+    in_fov: bool = False
+    occluded: bool = False
+    world_x_m: float = 0.0
+    world_y_m: float = 0.0
+    world_z_m: float = 100.0
+    velocity_x_m_s: float = 0.0
+    velocity_y_m_s: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)
