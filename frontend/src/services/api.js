@@ -3,9 +3,9 @@
  * Wraps all HTTP calls to the FastAPI backend at http://localhost:8000/api
  */
 
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL)
+const API_BASE = ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL)
   ? import.meta.env.VITE_API_URL
-  : 'http://localhost:8000/api';
+  : '/api').replace(/\/$/, '');
 
 
 async function request(path, options = {}) {
@@ -22,6 +22,9 @@ async function request(path, options = {}) {
 export const api = {
   /** Fetch all predefined scenario presets */
   getScenarios: () => request('/scenarios').then(r => r.json()),
+
+  /** Fetch backend lifecycle state */
+  getSimulationStatus: () => request('/simulation/status').then(r => r.json()),
 
   /** Start the simulation loop */
   startSimulation: () => request('/simulation/start', { method: 'POST' }).then(r => r.json()),

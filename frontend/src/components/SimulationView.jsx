@@ -2,7 +2,7 @@
  * SimulationView — The main simulation dashboard page.
  * Consumes the useSimulation hook and arranges all panels into the layout.
  */
-import React, { useState, Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Cpu } from 'lucide-react';
 
 import CameraFeedCanvas from '../components/CameraFeedCanvas';
@@ -22,21 +22,15 @@ export default function SimulationView({
   history,
   scenarios,
   selectedScenarioId,
+  disturbances,
   isRunning,
   isPaused,
   viewMode,
   isConnected,
   actions,
 }) {
-  const [disturbances, setDisturbances] = useState({
-    noise: 0,
-    vibration: 0,
-    turbulence: 0,
-    occlusion: false,
-    occlusion_duration_s: 2.0,
-  });
-
   const connectionStatus = isConnected ? 'CONNECTED' : 'DISCONNECTED';
+  const activeScenario = scenarios.find((scenario) => scenario.id === selectedScenarioId);
 
   return (
     <main className="flex-1 p-5 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -46,14 +40,14 @@ export default function SimulationView({
 
         {/* Camera Feed or 3D Scene */}
         {viewMode === 'camera' ? (
-          <CameraFeedCanvas telemetry={telemetry} isConnected={true} />
+          <CameraFeedCanvas telemetry={telemetry} isConnected={isConnected} />
         ) : (
           <Suspense fallback={
             <div className="w-full aspect-[4/3] bg-gray-950 rounded-xl border border-gray-800 flex items-center justify-center text-gray-500 text-sm animate-pulse">
               Loading 3D Scene Engine...
             </div>
           }>
-            <Scene3D telemetry={telemetry} />
+            <Scene3D telemetry={telemetry} scenarioConfig={activeScenario} />
           </Suspense>
         )}
 
@@ -89,7 +83,7 @@ export default function SimulationView({
         />
 
         {/* Disturbance Stress Engine */}
-        <DisturbancePanel disturbances={disturbances} onUpdate={setDisturbances} />
+        <DisturbancePanel disturbances={disturbances} onUpdate={actions.updateDisturbances} />
 
         {/* PDF Report Export */}
         <ReportModal metrics={metrics} scenarioName={selectedScenarioId} />

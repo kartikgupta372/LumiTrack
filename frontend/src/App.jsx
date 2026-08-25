@@ -21,6 +21,7 @@ export default function App() {
     history,
     scenarios,
     selectedScenarioId,
+    disturbances,
     isRunning,
     isPaused,
     isConnected,
@@ -41,8 +42,10 @@ export default function App() {
         history={history}
         scenarios={scenarios}
         selectedScenarioId={selectedScenarioId}
+        disturbances={disturbances}
         isRunning={isRunning}
         isPaused={isPaused}
+        isConnected={isConnected}
         viewMode={viewMode}
         actions={actions}
       />

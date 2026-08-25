@@ -94,14 +94,20 @@ class ModularSimEngine:
         beacon_model = self.beacon.step(dt)
 
         # ── 2. Apply gimbal vibration to orientation ───────────────────────
-        pan_d, tilt_d = self.gimbal.pan, self.gimbal.tilt
-        pan_d, tilt_d = self.env.apply_vibration(pan_d, tilt_d)
+        nominal_pan, nominal_tilt = self.gimbal.pan, self.gimbal.tilt
+        self.gimbal.pan, self.gimbal.tilt = self.env.apply_vibration(nominal_pan, nominal_tilt)
 
         # ── 3. Project beacon to image pixel coords ────────────────────────
         beacon_u, beacon_v, in_fov = self.gimbal.project(beacon_model)
+        self.gimbal.pan, self.gimbal.tilt = nominal_pan, nominal_tilt
 
         # ── 4. Render synthetic frame ──────────────────────────────────────
-        raw_frame = self.gimbal.render(beacon_u, beacon_v, self.config.target.size_radius)
+        raw_frame = self.gimbal.render(
+            beacon_u,
+            beacon_v,
+            self.config.target.size_radius,
+            self.config.target.intensity,
+        )
 
         # ── 5. Apply environmental disturbances ────────────────────────────
         frame, occluded = self.env.apply_to_frame(raw_frame, self.frame_index)
@@ -179,9 +185,12 @@ class ModularSimEngine:
         beacon_world = BeaconWorldState(
             x=beacon_model.x,
             y=beacon_model.y,
+            z=beacon_model.z,
             vx=beacon_model.vx,
             vy=beacon_model.vy,
-            visible=beacon_model.visible,
+            visible=beacon_model.visible and in_fov and not occluded,
+            in_fov=in_fov,
+            occluded=occluded,
         )
 
         self.frame_index += 1
@@ -197,7 +206,8 @@ class ModularSimEngine:
             error_y=error_y,
             total_error_px=round(total_error_px, 3),
             total_error_deg=round(total_error_deg, 5),
-            fps=round(1.0 / max(latency_ms / 1000.0, 1e-6), 1),
+            fps=self.config.fps,
+            processing_latency_ms=round(latency_ms, 3),
             lock_state=lock_state,
             acquisition_time_s=self.evaluator.get_metrics().acquisition_time_s,
             image_base64=img_b64,

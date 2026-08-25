@@ -49,7 +49,11 @@ export default function StatusCard({ metrics, telemetry }) {
           <Activity className="w-4 h-4 text-purple-400" />
         </div>
         <div className="text-2xl font-bold font-mono text-purple-300">
-          {metrics?.latency_ms !== undefined ? `${metrics.latency_ms} ms` : '11.5 ms'}
+          {metrics?.avg_processing_latency_ms !== undefined
+            ? `${Number(metrics.avg_processing_latency_ms).toFixed(1)} ms`
+            : telemetry?.processing_latency_ms !== undefined
+              ? `${Number(telemetry.processing_latency_ms).toFixed(1)} ms`
+              : '--'}
         </div>
         <div className="text-[10px] text-gray-500 mt-1">CV & Control update time</div>
       </div>

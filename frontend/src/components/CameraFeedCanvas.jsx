@@ -52,7 +52,9 @@ export default function CameraFeedCanvas({ telemetry, isConnected }) {
           <div
             className="absolute transition-all duration-75 ease-out flex flex-col items-center justify-center pointer-events-none"
             style={{
-              transform: `translate(${offsetXPercent}%, ${offsetYPercent}%)`,
+              left: `calc(50% + ${offsetXPercent}%)`,
+              top: `calc(50% + ${offsetYPercent}%)`,
+              transform: 'translate(-50%, -50%)',
             }}
           >
             {/* Pulsing Beacon Halo */}

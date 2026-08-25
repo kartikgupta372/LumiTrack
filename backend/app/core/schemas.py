@@ -1,30 +1,10 @@
-<<<<<<< HEAD
-from pydantic import BaseModel
-from ..core.models import (
-    CameraState,
-    PerformanceState,
-    Point2D,
-    TrackingState,
-)
+"""Validated API and telemetry contracts for the LumiTrack prototype."""
 
-class SimulationConfig(BaseModel):
-    target_fps: float = 30.0
-    noise: float = 0.0
-    vibration: float = 0.0
+from __future__ import annotations
 
-
-class SimulationResponse(BaseModel):
-    message: str
-    running: bool
-
-class SimulationStateUpdate(BaseModel):
-    beacon: Point2D | None = None
-    camera: CameraState | None = None
-    tracking: TrackingState | None = None
-    performance: PerformanceState | None = None
-=======
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -34,6 +14,7 @@ class TrajectoryType(str, Enum):
     CIRCULAR = "circular"
     SINUSOIDAL = "sinusoidal"
     ERRATIC = "erratic"
+    FIGURE_EIGHT = "figure_eight"
 
 
 class LockState(str, Enum):
@@ -55,74 +36,85 @@ class ControllerType(str, Enum):
 
 class TargetConfig(BaseModel):
     trajectory: TrajectoryType = TrajectoryType.CIRCULAR
-    initial_x: float = 0.0      # world coordinates (m)
+    initial_x: float = 0.0
     initial_y: float = 0.0
-    speed: float = 6.0          # m/s
-    radius: float = 20.0        # m for circular
-    frequency: float = 0.2      # Hz for sinusoidal
-    intensity: float = 255.0    # brightness (0-255)
-    size_radius: float = 8.0    # beacon radius in pixels
+    range_m: float = Field(100.0, gt=0.0)
+    speed: float = Field(6.0, ge=0.0)
+    radius: float = Field(20.0, ge=0.0)
+    frequency: float = Field(0.2, ge=0.0)
+    intensity: float = Field(255.0, ge=0.0, le=255.0)
+    size_radius: float = Field(8.0, ge=1.0)
 
 
 class DisturbanceConfig(BaseModel):
-    noise: float = Field(0.0, ge=0.0, le=100.0)         # Gaussian noise (0-100%)
-    vibration: float = Field(0.0, ge=0.0, le=100.0)     # Camera jitter (0-100%)
-    turbulence: float = Field(0.0, ge=0.0, le=100.0)    # Scintillation/refraction (0-100%)
-    blur: float = Field(0.0, ge=0.0, le=100.0)          # Motion blur (0-100%)
-    occlusion: bool = False                              # Target hidden
-    occlusion_duration_s: float = 2.0
+    noise: float = Field(0.0, ge=0.0, le=100.0)
+    vibration: float = Field(0.0, ge=0.0, le=100.0)
+    turbulence: float = Field(0.0, ge=0.0, le=100.0)
+    blur: float = Field(0.0, ge=0.0, le=100.0)
+    occlusion: bool = False
+    occlusion_start_s: float = Field(2.0, ge=0.0)
+    occlusion_duration_s: float = Field(2.0, ge=0.0)
+    occlusion_period_s: float = Field(6.0, ge=0.0)
 
 
 class CameraConfig(BaseModel):
-    fov_x: float = 60.0         # degrees
-    fov_y: float = 45.0         # degrees
-    frame_width: int = 640      # px
-    frame_height: int = 480     # px
-    max_pan_rate: float = 90.0  # deg/s
-    max_tilt_rate: float = 90.0 # deg/s
+    fov_x: float = Field(60.0, gt=0.0, lt=360.0)
+    fov_y: float = Field(45.0, gt=0.0, lt=180.0)
+    frame_width: int = Field(640, ge=2)
+    frame_height: int = Field(480, ge=2)
+    max_pan_rate: float = Field(90.0, gt=0.0)
+    max_tilt_rate: float = Field(90.0, gt=0.0)
+    initial_pan: float = 0.0
+    initial_tilt: float = 0.0
 
 
 class PIDConfig(BaseModel):
-    kp: float = 0.15
-    ki: float = 0.01
-    kd: float = 0.02
+    # Re-scaled for degree-domain error as required by the audit.
+    kp: float = Field(3.5, ge=0.0)
+    ki: float = Field(0.2, ge=0.0)
+    kd: float = Field(0.15, ge=0.0)
 
 
 class ScenarioConfig(BaseModel):
     id: str = "default_scenario"
     name: str = "Nominal Trajectory"
-    duration_s: float = 60.0
-    fps: float = 30.0
+    duration_s: float = Field(60.0, gt=0.0)
+    fps: float = Field(30.0, gt=0.0, le=120.0)
+    seed: int = Field(169, ge=0)
     target: TargetConfig = Field(default_factory=TargetConfig)
     camera: CameraConfig = Field(default_factory=CameraConfig)
     disturbances: DisturbanceConfig = Field(default_factory=DisturbanceConfig)
     pid: PIDConfig = Field(default_factory=PIDConfig)
     detector_type: DetectorType = DetectorType.OPENCV
     controller_type: ControllerType = ControllerType.PID
-    lock_tolerance_px: float = 20.0
+    lock_tolerance_px: float = Field(20.0, gt=0.0)
 
 
 class BeaconWorldState(BaseModel):
     x: float
     y: float
+    z: float = 100.0
     vx: float
     vy: float
     visible: bool = True
+    in_fov: bool = True
+    occluded: bool = False
 
 
 class CameraState(BaseModel):
-    pan: float = 0.0   # deg
-    tilt: float = 0.0  # deg
+    pan: float = 0.0
+    tilt: float = 0.0
     pan_rate: float = 0.0
     tilt_rate: float = 0.0
 
 
 class DetectionResult(BaseModel):
     valid: bool
+    associated: bool = False
     x: Optional[float] = None
     y: Optional[float] = None
     confidence: float = 0.0
-    bbox: Optional[List[int]] = None # [x, y, w, h]
+    bbox: Optional[list[int]] = None
 
 
 class TrackState(BaseModel):
@@ -146,9 +138,10 @@ class TelemetryFrame(BaseModel):
     total_error_px: float
     total_error_deg: float
     fps: float
+    processing_latency_ms: float
     lock_state: LockState
     acquisition_time_s: Optional[float] = None
-    image_base64: Optional[str] = None  # Processed JPEG frame encoded in base64
+    image_base64: Optional[str] = None
 
 
 class PerformanceMetrics(BaseModel):
@@ -159,8 +152,7 @@ class PerformanceMetrics(BaseModel):
     average_error_px: float = 0.0
     max_error_px: float = 0.0
     average_error_deg: float = 0.0
-    lock_retention_rate: float = 0.0 # percentage (0-100%)
+    lock_retention_rate: float = 0.0
     lost_target_events: int = 0
     successful_recoveries: int = 0
     avg_processing_latency_ms: float = 0.0
->>>>>>> 0ae65c60083ba3fd455f868222cea90b34c9947f

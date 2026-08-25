@@ -4,9 +4,12 @@
  * to the simulation telemetry stream at ws://localhost:8000/ws/simulation.
  */
 
+const DEFAULT_WS_URL = typeof window !== 'undefined'
+  ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/simulation`
+  : 'ws://localhost:8000/ws/simulation';
 const WS_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_URL)
   ? import.meta.env.VITE_WS_URL
-  : 'ws://localhost:8000/ws/simulation';
+  : DEFAULT_WS_URL;
 const RECONNECT_DELAY_MS = 2000;
 
 export class SimulationWebSocket {
